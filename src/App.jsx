@@ -280,6 +280,11 @@ const toGitHubRawUrl = (filename) =>
 // ?v=숫자를 바꾸면 캐시를 무시하고 최신 이미지를 가져옵니다
 const LOGOMONG_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/logomong.png?v=3`;
 
+// 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
+const APP_VERSION = '0.9';
+const APP_STAGE = 'BETA';
+const APP_RELEASE_DATE = '2026.04.21';
+
 const BGM_CATEGORIES = [
   {
     id: 'dawn',
@@ -843,8 +848,19 @@ function Header({ streak, stickers }) {
           <Logomong size={100} animate="float" />
         </div>
         <div>
-          <div className="font-display text-2xl leading-none text-[#4A3F35]">우리집 예배</div>
-          <div className="text-[11px] text-[#8B7355] mt-1 tracking-wider">로고몽과 함께</div>
+          <div className="flex items-center gap-1.5">
+            <div className="font-display text-2xl leading-none text-[#4A3F35]">우리집 예배</div>
+            <span
+              className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded-md text-white"
+              style={{
+                background: 'linear-gradient(135deg, #E9A94D, #D4756B)',
+                boxShadow: '0 2px 6px -2px rgba(212, 117, 107, 0.5)'
+              }}
+            >
+              BETA
+            </span>
+          </div>
+          <div className="text-[11px] text-[#8B7355] mt-1 tracking-wider">v{APP_VERSION} · 로고몽과 함께</div>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -2411,6 +2427,17 @@ function WelcomeGate({ onEnter, verse }) {
             찬양이 자동으로 흘러나와요
           </div>
         )}
+
+        {/* 베타 버전 안내 */}
+        <div className="mt-6 welcome-fade welcome-fade-4 text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
+            <span className="text-[9px] font-bold tracking-[0.2em] text-white/90">BETA</span>
+            <span className="text-[10px] text-white/70">·</span>
+            <span className="text-[10px] text-white/80 font-bold">v{APP_VERSION}</span>
+            <span className="text-[10px] text-white/70">·</span>
+            <span className="text-[10px] text-white/80">함께 만들어가요</span>
+          </div>
+        </div>
       </div>
     </div>
   );
