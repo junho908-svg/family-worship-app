@@ -281,7 +281,7 @@ const toGitHubRawUrl = (filename) =>
 const LOGOMONG_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/logomong.png?v=3`;
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9';
+const APP_VERSION = '0.9.1';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -767,6 +767,24 @@ export default function FamilyWorship() {
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { scrollbar-width: none; }
+
+        /* ===== v0.9.1 패치: iOS Safari 호환성 개선 ===== */
+        /* 한국어 어절 단위 줄바꿈 (모든 텍스트에 적용) */
+        body, p, h1, h2, h3, h4, h5, h6, span, div, button, a, li {
+          word-break: keep-all;
+          overflow-wrap: break-word;
+        }
+        /* iOS 텍스트 자동 크기 조절 방지 (가로/세로 회전 시) */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        /* iPhone 노치 / 홈 인디케이터 안전 영역 */
+        body {
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        /* 탭 하이라이트 색상 제거 (iOS) */
+        * { -webkit-tap-highlight-color: transparent; }
+        /* 이미지 드래그 방지 (iOS) */
+        img { -webkit-user-drag: none; user-select: none; }
       `}</style>
 
       {/* 전역 오디오 엘리먼트 */}
@@ -1361,9 +1379,62 @@ function Logomong({ size = 80, animate = 'float', className = '', style = {}, gl
 
 // ============ 로고몽 + 말풍선 ============
 function LogomongSpeech({ message, size = 90, color = '#E9A94D' }) {
+  // 큰 사이즈(120px+)일 때는 세로 배치, 작은 사이즈는 가로 배치
+  const isLarge = size >= 120;
+
+  if (isLarge) {
+    // 세로 배치: 로고몽 위, 말풍선 아래 (모바일 친화적)
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <Logomong size={size} animate="bounce" glow />
+        <div
+          className="relative rounded-2xl px-5 py-3 w-full"
+          style={{
+            background: `linear-gradient(135deg, white, ${color}10)`,
+            border: `2px solid ${color}40`,
+            boxShadow: `0 4px 12px -4px ${color}30`
+          }}
+        >
+          {/* 위쪽 화살표 (말풍선 꼬리) */}
+          <div
+            className="absolute left-1/2 top-[-9px] w-0 h-0"
+            style={{
+              transform: 'translateX(-50%)',
+              borderLeft: '8px solid transparent',
+              borderRight: '8px solid transparent',
+              borderBottom: `9px solid ${color}40`
+            }}
+          />
+          <div
+            className="absolute left-1/2 top-[-6px] w-0 h-0"
+            style={{
+              transform: 'translateX(-50%)',
+              borderLeft: '7px solid transparent',
+              borderRight: '7px solid transparent',
+              borderBottom: '7px solid white'
+            }}
+          />
+          <p
+            className="font-display text-base font-bold text-[#4A3F35] leading-snug text-center"
+            style={{
+              wordBreak: 'keep-all',
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal'
+            }}
+          >
+            {message}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // 작은 사이즈: 기존 가로 배치 유지 (한글 줄바꿈만 개선)
   return (
     <div className="flex items-end gap-3">
-      <Logomong size={size} animate="bounce" glow />
+      <div style={{ flexShrink: 0 }}>
+        <Logomong size={size} animate="bounce" glow />
+      </div>
       <div
         className="relative rounded-2xl px-4 py-3 flex-1"
         style={{
@@ -1389,7 +1460,13 @@ function LogomongSpeech({ message, size = 90, color = '#E9A94D' }) {
             borderRight: '8px solid white'
           }}
         />
-        <p className="font-display text-base font-bold text-[#4A3F35] leading-snug">
+        <p
+          className="font-display text-base font-bold text-[#4A3F35] leading-snug"
+          style={{
+            wordBreak: 'keep-all',
+            overflowWrap: 'break-word'
+          }}
+        >
           {message}
         </p>
       </div>
@@ -1577,10 +1654,21 @@ function WorshipComplete({ elapsed, onContinue }) {
   const mm = Math.floor(elapsed / 60);
   return (
     <div className="pt-8 text-center anim-fade-up">
-      <div className="relative inline-block mb-6">
-        <div className="text-7xl anim-pop">🌟</div>
-        <div className="absolute -right-24 -bottom-4">
+      {/* 로고몽 + 별: 안전한 flex column 레이아웃 */}
+      <div className="flex flex-col items-center mb-6">
+        <div className="relative">
           <Logomong size={180} animate="celebrate" glow />
+          {/* 별을 로고몽 우측 상단에 작게 띄움 (컨테이너 안에서 안전하게) */}
+          <div
+            className="absolute text-4xl anim-pop"
+            style={{
+              top: '-8px',
+              right: '-8px',
+              filter: 'drop-shadow(0 2px 8px rgba(255,200,80,0.6))'
+            }}
+          >
+            🌟
+          </div>
         </div>
       </div>
       <h2 className="font-serif-ko text-3xl font-bold text-[#4A3F35] mt-4" style={{ fontWeight: 800 }}>
@@ -1596,7 +1684,10 @@ function WorshipComplete({ elapsed, onContinue }) {
             +3 스티커 획득!
           </div>
         </div>
-        <div className="font-serif-ko text-[15px] text-[#4A3F35] leading-relaxed text-center" style={{ fontWeight: 700 }}>
+        <div
+          className="font-serif-ko text-[15px] text-[#4A3F35] leading-relaxed text-center"
+          style={{ fontWeight: 700, wordBreak: 'keep-all' }}
+        >
           “주께서 너에게 복을 주시고<br/>너를 지키시기를 원하며<br/>
           주께서 그 얼굴을 네게 비추사<br/>은혜 베푸시기를 원하노라”
         </div>
