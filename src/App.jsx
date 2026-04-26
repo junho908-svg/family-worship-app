@@ -281,7 +281,7 @@ const toGitHubRawUrl = (filename) =>
 const LOGOMONG_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/logomong.png?v=3`;
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.1';
+const APP_VERSION = '0.9.2';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -1481,6 +1481,11 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
   const [elapsed, setElapsed] = useState(0);
   const [done, setDone] = useState(false);
 
+  // v0.9.2: 어린이 질문 + 가족 질문 인덱스를 상태로 관리
+  // (이전에는 Math.random()이 매 리렌더마다 실행되어 1초마다 질문이 바뀌는 버그)
+  const [kidsQIdx, setKidsQIdx] = useState(() => Math.floor(Math.random() * kidsQuestions.length));
+  const [familyQStartIdx, setFamilyQStartIdx] = useState(() => Math.floor(Math.random() * familyQuestions.length));
+
   useEffect(() => {
     if (!mode || done) return;
     const timer = setInterval(() => setElapsed(e => e + 1), 1000);
@@ -1585,18 +1590,68 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
 
       {current.title.includes('나눔') && (
         <div className="paper-card rounded-2xl p-4">
-          <div className="text-[10px] font-bold text-[#8B5E3C] tracking-wider mb-3">나눔 질문</div>
-          <div className="space-y-2">
-            {familyQuestions.slice(0, 3).map((q, i) => (
-              <div key={i} className="flex gap-2 text-sm text-[#4A3F35]">
-                <span className="font-display font-bold text-[#E9A94D]">{i + 1}.</span>
-                <span>{q}</span>
-              </div>
-            ))}
+          {/* 가족 나눔 질문 (3개 순환 표시) */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] font-bold text-[#8B5E3C] tracking-wider">나눔 질문</div>
+            <button
+              onClick={() => setFamilyQStartIdx((familyQStartIdx + 1) % familyQuestions.length)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #FFF4D6, #FFE0C7)',
+                color: '#8B5E3C',
+                border: '1px solid #F0E2C6'
+              }}
+            >
+              🔄 다른 질문
+            </button>
           </div>
-          <div className="mt-3 pt-3 border-t border-[#F0E2C6]">
-            <div className="text-[10px] font-bold text-[#D4756B] tracking-wider mb-2">🌱 어린이를 위한 질문</div>
-            <div className="text-sm text-[#4A3F35]">{kidsQuestions[Math.floor(Math.random() * kidsQuestions.length)]}</div>
+          <div className="space-y-2.5">
+            {[0, 1, 2].map(offset => {
+              const q = familyQuestions[(familyQStartIdx + offset) % familyQuestions.length];
+              return (
+                <div key={offset} className="flex gap-2.5 text-sm text-[#4A3F35] leading-relaxed">
+                  <span className="font-display font-bold text-[#E9A94D] flex-shrink-0">{offset + 1}.</span>
+                  <span style={{ wordBreak: 'keep-all' }}>{q}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 어린이를 위한 질문 (큰 카드 + 새로고침) */}
+          <div
+            className="mt-4 pt-4 border-t border-[#F0E2C6]"
+          >
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="text-[10px] font-bold text-[#D4756B] tracking-wider">🌱 어린이를 위한 질문</div>
+              <button
+                onClick={() => setKidsQIdx((kidsQIdx + 1) % kidsQuestions.length)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all active:scale-95"
+                style={{
+                  background: 'linear-gradient(135deg, #FFE0E0, #FFD4D4)',
+                  color: '#B85450',
+                  border: '1px solid #F0C8C8'
+                }}
+              >
+                🔄 다른 질문
+              </button>
+            </div>
+            <div
+              className="rounded-xl p-3.5 text-center"
+              style={{
+                background: 'linear-gradient(135deg, #FFF8F0, #FFE9E0)',
+                border: '1.5px dashed #F0B8B0'
+              }}
+            >
+              <div
+                className="font-display text-base font-bold text-[#4A3F35] leading-relaxed"
+                style={{ wordBreak: 'keep-all' }}
+              >
+                {kidsQuestions[kidsQIdx]}
+              </div>
+              <div className="text-[10px] text-[#B85450] mt-2 opacity-80">
+                💛 천천히 읽어주세요
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -2185,18 +2240,24 @@ function ChannelTab() {
               }}
             />
           </div>
-          <div className="p-3 flex items-center justify-between">
-            <div className="text-[10px] text-[#8B7355]">
+          <div className="p-3 flex items-center justify-between gap-2">
+            <div className="text-[10px] text-[#8B7355] flex-1">
               ▶ 앱 안에서 자동 재생 · 전체화면 지원
             </div>
             <a
               href={`https://www.youtube.com/playlist?list=${current.id}`}
               target="_blank"
               rel="noreferrer"
-              className="px-2.5 py-1 rounded-full text-[10px] font-bold text-white"
-              style={{ background: current.color }}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold text-white transition-all active:scale-95 flex-shrink-0"
+              style={{
+                background: current.color,
+                boxShadow: `0 4px 12px -4px ${current.color}80`
+              }}
             >
-              YouTube ↗
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M7 17L17 7M9 7h8v8" />
+              </svg>
+              YouTube 앱에서 열기
             </a>
           </div>
         </div>
@@ -2208,51 +2269,79 @@ function ChannelTab() {
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h3 className="font-display text-lg font-bold text-[#4A3F35]">📚 재생목록 선택</h3>
-          <span className="text-[10px] text-[#8B7355]">탭하여 전환</span>
+          <span className="text-[10px] text-[#8B7355]">탭=앱 내 재생 · ↗=YouTube 열기</span>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           {PLAYLISTS.map((p, i) => {
             const selected = i === selectedIdx;
             const ready = isValidPlaylistId(p.id);
             return (
-              <button
-                key={i}
-                onClick={() => setSelectedIdx(i)}
-                className="relative rounded-2xl p-3 text-left transition-all active:scale-95"
-                style={{
-                  background: selected ? `linear-gradient(135deg, ${p.color}, ${p.color}dd)` : '#FFFDF7',
-                  border: selected ? `1px solid ${p.color}` : '1px solid #F0E2C6',
-                  boxShadow: selected ? `0 8px 20px -8px ${p.color}80` : '0 1px 2px rgba(74,63,53,0.04)'
-                }}
-              >
-                {!ready && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold" style={{
-                    background: '#FFE0C7', color: '#D4756B'
-                  }}>!</div>
-                )}
-                {selected && ready && (
-                  <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white flex items-center justify-center">
-                    <Check className="w-2.5 h-2.5" style={{ color: p.color }} strokeWidth={3.5} />
-                  </div>
-                )}
-                <div className="text-2xl mb-1.5">{p.icon}</div>
-                <div className="font-display text-[13px] font-bold leading-tight line-clamp-2" style={{
-                  color: selected ? 'white' : '#4A3F35'
-                }}>
-                  {p.title}
-                </div>
-                <div className="flex items-center gap-1 mt-1.5">
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{
-                    background: selected ? 'rgba(255,255,255,0.25)' : p.color + '20',
-                    color: selected ? 'white' : p.color
+              <div key={i} className="relative">
+                {/* 메인 버튼 (앱 내 재생) */}
+                <button
+                  onClick={() => setSelectedIdx(i)}
+                  className="w-full relative rounded-2xl p-3 text-left transition-all active:scale-95"
+                  style={{
+                    background: selected ? `linear-gradient(135deg, ${p.color}, ${p.color}dd)` : '#FFFDF7',
+                    border: selected ? `1px solid ${p.color}` : '1px solid #F0E2C6',
+                    boxShadow: selected ? `0 8px 20px -8px ${p.color}80` : '0 1px 2px rgba(74,63,53,0.04)'
+                  }}
+                >
+                  {!ready && (
+                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold" style={{
+                      background: '#FFE0C7', color: '#D4756B'
+                    }}>!</div>
+                  )}
+                  {selected && ready && (
+                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5" style={{ color: p.color }} strokeWidth={3.5} />
+                    </div>
+                  )}
+                  <div className="text-2xl mb-1.5">{p.icon}</div>
+                  <div className="font-display text-[13px] font-bold leading-tight line-clamp-2 pr-6" style={{
+                    color: selected ? 'white' : '#4A3F35',
+                    wordBreak: 'keep-all'
                   }}>
-                    #{p.tag}
-                  </span>
-                  <span className="text-[9px]" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#8B7355' }}>
-                    {p.count}편
-                  </span>
-                </div>
-              </button>
+                    {p.title}
+                  </div>
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{
+                      background: selected ? 'rgba(255,255,255,0.25)' : p.color + '20',
+                      color: selected ? 'white' : p.color
+                    }}>
+                      #{p.tag}
+                    </span>
+                    <span className="text-[9px]" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#8B7355' }}>
+                      {p.count}편
+                    </span>
+                  </div>
+                </button>
+
+                {/* v0.9.2: YouTube 아웃링크 버튼 (우측 하단) */}
+                {ready && (
+                  <a
+                    href={`https://www.youtube.com/playlist?list=${p.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute bottom-2 right-2 w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md"
+                    style={{
+                      background: selected ? 'rgba(255,255,255,0.95)' : '#FFFDF7',
+                      border: selected ? 'none' : `1.5px solid ${p.color}40`
+                    }}
+                    title="YouTube에서 열기"
+                    aria-label="YouTube에서 열기"
+                  >
+                    <svg
+                      width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke={selected ? p.color : p.color}
+                      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    >
+                      <path d="M7 17L17 7M9 7h8v8" />
+                    </svg>
+                  </a>
+                )}
+              </div>
             );
           })}
         </div>
