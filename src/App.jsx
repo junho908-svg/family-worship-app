@@ -280,8 +280,33 @@ const toGitHubRawUrl = (filename) =>
 // ?v=숫자를 바꾸면 캐시를 무시하고 최신 이미지를 가져옵니다
 const LOGOMONG_URL = `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/logomong.png?v=3`;
 
+// v0.9.3: 로고몽 11가지 표정/포즈 (위치별 자동 매칭)
+// GitHub 저장소 내 logomong/ 폴더에 업로드된 이미지들
+const toLogomongVariant = (filename) =>
+  `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/logomong/${filename}?v=1`;
+
+const LOGOMONG_VARIANTS = {
+  // 기본 (v0.9~v0.9.2 호환): 책 안고 있는 모습
+  default:   LOGOMONG_URL,
+
+  // 메인 6포즈
+  debut:     toLogomongVariant('pose1_debut.png'),      // 데뷔 - 첫 만남
+  intro:     toLogomongVariant('pose2_intro.png'),      // 자기소개 - 책 펼치기
+  reveal:    toLogomongVariant('pose3_reveal.png'),     // 빛 호출 - 발견
+  hugging:   toLogomongVariant('pose4_hugging.png'),    // 책 가슴에 안고 - 가치
+  welcome:   toLogomongVariant('pose5_welcome.png'),    // 양팔 벌려 환영
+  winking:   toLogomongVariant('pose6_winking.png'),    // 윙크 작별
+
+  // 보너스 5포즈
+  praying:   toLogomongVariant('bonus1_praying.png'),   // 기도하는
+  surprised: toLogomongVariant('bonus2_surprised.png'), // 깜짝 놀란/행복
+  secret:    toLogomongVariant('bonus3_secret.png'),    // 신비한 쉿!
+  sleeping:  toLogomongVariant('bonus4_sleeping.png'),  // 잠자는
+  teaching:  toLogomongVariant('bonus5_teaching.png'),  // 책 가리키며 가르치는
+};
+
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.2';
+const APP_VERSION = '0.9.3';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -863,7 +888,7 @@ function Header({ streak, stickers }) {
     <div className="flex items-center justify-between py-4 anim-fade-up">
       <div className="flex items-center gap-3">
         <div className="relative">
-          <Logomong size={100} animate="float" />
+          <Logomong size={100} animate="float" variant="hugging" />
         </div>
         <div>
           <div className="flex items-center gap-1.5">
@@ -1205,7 +1230,7 @@ function WeeklyAttendanceModal({ weekDayCount, streak, stickers, todayDone, onCl
           <div className="relative">
             <div className="flex items-center justify-center gap-3 mb-2">
               <div className="text-5xl anim-float">{msg.emoji}</div>
-              <Logomong size={160} animate="bounce" glow />
+              <Logomong size={160} animate="bounce" glow variant="surprised" />
             </div>
             <div className="text-[10px] tracking-[0.3em] text-white/80 font-bold">FAMILY OF THE WEEK</div>
             <h2 className="font-serif-ko text-2xl font-bold text-white mt-1 leading-tight" style={{ fontWeight: 800 }}>
@@ -1308,8 +1333,12 @@ function StatCell({ icon, value, label, color }) {
 }
 
 // ============ 로고몽 마스코트 (재사용 컴포넌트) ============
-function Logomong({ size = 80, animate = 'float', className = '', style = {}, glow = false, circleBg = true }) {
+function Logomong({ size = 80, animate = 'float', className = '', style = {}, glow = false, circleBg = true, variant = 'default' }) {
   const [errored, setErrored] = useState(false);
+
+  // v0.9.3: variant 기반 이미지 URL 선택 (없으면 default로 fallback)
+  const imageUrl = LOGOMONG_VARIANTS[variant] || LOGOMONG_VARIANTS.default;
+
   const animClass = {
     float: 'anim-float',
     bounce: 'anim-bounce-y',
@@ -1360,8 +1389,9 @@ function Logomong({ size = 80, animate = 'float', className = '', style = {}, gl
         </div>
       ) : (
         <img
-          src={LOGOMONG_URL}
+          src={imageUrl}
           alt="로고몽"
+          key={imageUrl}
           className={`relative ${animClass}`}
           style={{
             width: '92%',
@@ -1712,7 +1742,7 @@ function WorshipComplete({ elapsed, onContinue }) {
       {/* 로고몽 + 별: 안전한 flex column 레이아웃 */}
       <div className="flex flex-col items-center mb-6">
         <div className="relative">
-          <Logomong size={180} animate="celebrate" glow />
+          <Logomong size={180} animate="celebrate" glow variant="winking" />
           {/* 별을 로고몽 우측 상단에 작게 띄움 (컨테이너 안에서 안전하게) */}
           <div
             className="absolute text-4xl anim-pop"
@@ -1918,7 +1948,7 @@ function StoryView({ story, onBack, onComplete, completed }) {
           {story.story}
         </p>
         <div className="mt-5 p-4 rounded-xl flex items-start gap-3" style={{ background: story.color + '15' }}>
-          <Logomong size={110} animate="bounce" className="flex-shrink-0 mt-1" />
+          <Logomong size={110} animate="bounce" className="flex-shrink-0 mt-1" variant="teaching" />
           <div className="flex-1">
             <div className="text-[10px] font-bold tracking-wider mb-1" style={{ color: story.color }}>💡 로고몽이 알려주는 오늘의 배움</div>
             <div className="text-sm text-[#4A3F35] font-bold leading-relaxed">{story.lesson}</div>
@@ -2117,7 +2147,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
           {prayers.length === 0 ? (
             <div className="paper-card rounded-2xl p-8 text-center">
               <div className="mb-4 flex justify-center">
-                <Logomong size={180} animate="wiggle" />
+                <Logomong size={180} animate="float" variant="praying" />
               </div>
               <div className="font-display text-base text-[#4A3F35] font-bold">아직 기도 제목이 없어요</div>
               <div className="text-xs text-[#8B7355] mt-1">오늘 하나님께 드리고 싶은 기도를 적어보세요</div>
@@ -2156,7 +2186,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
           {answered.length === 0 ? (
             <div className="paper-card rounded-2xl p-8 text-center">
               <div className="mb-4 flex justify-center">
-                <Logomong size={180} animate="float" glow />
+                <Logomong size={180} animate="float" glow variant="surprised" />
               </div>
               <div className="font-display text-base text-[#4A3F35] font-bold">응답 받은 기도가 여기에 쌓여요</div>
               <div className="text-xs text-[#8B7355] mt-1">하나님의 신실하심을 기록해요</div>
@@ -2538,7 +2568,7 @@ function WelcomeGate({ onEnter, verse }) {
 
           {/* 로고몽이 빼꼼! */}
           <div className="absolute -right-16 -bottom-10 anim-peek">
-            <Logomong size={200} animate="bounce" glow />
+            <Logomong size={200} animate="bounce" glow variant="welcome" />
           </div>
         </div>
 
