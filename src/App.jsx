@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.3';
+const APP_VERSION = '0.9.4';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -2556,31 +2556,56 @@ function WelcomeGate({ onEnter, verse }) {
 
       {/* 컨텐츠 */}
       <div className="relative max-w-[480px] mx-auto h-full flex flex-col items-center justify-center px-8 py-12">
-        {/* 시간대 아이콘 + 로고몽 */}
+        {/* v0.9.4: 로고몽이 메인 (정중앙 배치) + 시간대 아이콘은 작은 배지로 */}
         <div className="relative welcome-fade welcome-fade-1">
-          <div className="w-40 h-40 rounded-full flex items-center justify-center text-8xl bg-white/15 backdrop-blur-md" style={{
-            boxShadow: '0 20px 60px -10px rgba(0,0,0,0.25)'
-          }}>
-            <span className="anim-float" style={{ animationDuration: '4s' }}>{rec.icon}</span>
+          {/* 로고몽 — 정중앙 메인 */}
+          <div className="relative">
+            <Logomong size={180} animate="bounce" glow variant="welcome" />
+            {/* 시간대 아이콘을 우측 상단 작은 배지로 */}
+            <div
+              className="absolute -top-1 -right-1 w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-white/25 backdrop-blur-md anim-float"
+              style={{
+                boxShadow: '0 8px 20px -4px rgba(0,0,0,0.25)',
+                border: '2px solid rgba(255,255,255,0.4)',
+                animationDuration: '4s'
+              }}
+            >
+              {rec.icon}
+            </div>
           </div>
+          {/* 로고몽 주위 회전 링 */}
           <div className="absolute -inset-3 rounded-full border border-white/20 pointer-events-none anim-rotate" style={{ animationDuration: '30s' }} />
           <div className="absolute -inset-7 rounded-full border border-white/10 pointer-events-none anim-rotate" style={{ animationDuration: '45s', animationDirection: 'reverse' }} />
-
-          {/* 로고몽이 빼꼼! */}
-          <div className="absolute -right-16 -bottom-10 anim-peek">
-            <Logomong size={200} animate="bounce" glow variant="welcome" />
-          </div>
         </div>
 
         {/* 인사말 */}
         <div className="mt-8 text-center welcome-fade welcome-fade-2">
-          <div className="text-[10px] tracking-[0.35em] text-white/70 font-bold mb-3 uppercase">
+          {/* v0.9.4: 햇살 텍스트 가독성 개선 — 진한 흰색 + 그림자 */}
+          <div
+            className="text-[11px] tracking-[0.35em] text-white font-bold mb-3 uppercase"
+            style={{
+              textShadow: '0 2px 8px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.25)',
+              opacity: 0.95
+            }}
+          >
             {msg.ambient}
           </div>
-          <h1 className="font-serif-ko text-[28px] font-bold text-white leading-tight" style={{ fontWeight: 800 }}>
+          <h1
+            className="font-serif-ko text-[28px] font-bold text-white leading-tight"
+            style={{
+              fontWeight: 800,
+              textShadow: '0 4px 16px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2)'
+            }}
+          >
             {msg.greeting}
           </h1>
-          <p className="text-sm text-white/90 leading-relaxed mt-3 whitespace-pre-line">
+          <p
+            className="text-sm text-white leading-relaxed mt-3 whitespace-pre-line"
+            style={{
+              opacity: 0.95,
+              textShadow: '0 2px 6px rgba(0,0,0,0.25)'
+            }}
+          >
             {msg.subtext}
           </p>
         </div>
