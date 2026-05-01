@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.4';
+const APP_VERSION = '0.9.5';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -507,6 +507,10 @@ export default function FamilyWorship() {
   const [completedStories, setCompletedStories] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // v0.9.5: 시니어 친화 - 글씨 크기 설정
+  // 0=작게(0.9x) / 1=보통(1.0x) / 2=크게(1.2x) / 3=아주크게(1.4x)
+  const [fontSize, setFontSize] = useState(1);
+
   // BGM 상태
   const audioRef = useRef(null);
   const [currentTrack, setCurrentTrack] = useState(null); // { track, category }
@@ -547,6 +551,8 @@ export default function FamilyWorship() {
         setAnswered(await get('answered', []));
         setCompletedStories(await get('completedStories', []));
         setFavorites(await get('favorites', []));
+        // v0.9.5: 글씨 크기 설정 복원 (기본값 1=보통)
+        setFontSize(await get('fontSize', 1));
       } catch (e) { /* noop */ }
       setLoading(false);
     };
@@ -593,6 +599,25 @@ export default function FamilyWorship() {
     sleepTimerRef.current = setTimeout(() => setSleepTimer(sleepTimer - 1), 60000);
     return () => clearTimeout(sleepTimerRef.current);
   }, [sleepTimer]);
+
+  // v0.9.5: 글씨 크기 변경 시 HTML 루트에 적용 + localStorage 저장
+  useEffect(() => {
+    if (loading) return; // 초기 로딩 중에는 적용하지 않음
+
+    const FONT_SCALE_MAP = [0.9, 1.0, 1.2, 1.4];
+    const scale = FONT_SCALE_MAP[fontSize] || 1.0;
+
+    // HTML 루트의 font-size에 적용 (rem 단위 자동 스케일링)
+    document.documentElement.style.fontSize = `${scale * 16}px`;
+
+    // 저장
+    save('fontSize', fontSize);
+  }, [fontSize, loading]);
+
+  // 글씨 크기 토글 핸들러 (작게→보통→크게→아주크게→다시 작게)
+  const handleFontSizeToggle = () => {
+    setFontSize((prev) => (prev + 1) % 4);
+  };
 
   const save = async (key, val) => {
     try {
@@ -828,7 +853,7 @@ export default function FamilyWorship() {
         )}
         {!loading && welcomeShown && (
           <>
-            <Header streak={streak} stickers={stickers} />
+            <Header streak={streak} stickers={stickers} fontSize={fontSize} onFontSizeToggle={handleFontSizeToggle} />
 
             {tab === 'home' && (
               <HomeTab
@@ -883,7 +908,11 @@ export default function FamilyWorship() {
 }
 
 // ============ 헤더 ============
-function Header({ streak, stickers }) {
+function Header({ streak, stickers, fontSize, onFontSizeToggle }) {
+  // v0.9.5: 글씨 크기 라벨
+  const FONT_SIZE_LABELS = ['작게', '보통', '크게', '아주크게'];
+  const FONT_SIZE_DOTS = ['·', '··', '···', '····'];
+
   return (
     <div className="flex items-center justify-between py-4 anim-fade-up">
       <div className="flex items-center gap-3">
@@ -903,10 +932,30 @@ function Header({ streak, stickers }) {
               BETA
             </span>
           </div>
-          <div className="text-[11px] text-[#8B7355] mt-1 tracking-wider">v{APP_VERSION} · 로고몽과 함께</div>
+          {/* v0.9.5: 명도 대비 강화 (#8B7355 → #6B5640) */}
+          <div className="text-[11px] text-[#6B5640] mt-1 tracking-wider">v{APP_VERSION} · 로고몽과 함께</div>
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {/* v0.9.5: 글씨 크기 토글 버튼 */}
+        {onFontSizeToggle && (
+          <button
+            onClick={onFontSizeToggle}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full paper-card transition-all active:scale-95"
+            title={`글씨: ${FONT_SIZE_LABELS[fontSize]}`}
+            aria-label={`글씨 크기 ${FONT_SIZE_LABELS[fontSize]}, 탭하여 변경`}
+          >
+            <span
+              className="font-display font-bold text-[#4A3F35]"
+              style={{ fontSize: `${10 + fontSize * 2}px`, lineHeight: 1 }}
+            >
+              가
+            </span>
+            <span className="text-[8px] text-[#6B5640] font-bold tracking-tighter">
+              {FONT_SIZE_DOTS[fontSize]}
+            </span>
+          </button>
+        )}
         <div className="flex items-center gap-1 px-3 py-1.5 rounded-full paper-card">
           <Flame className="w-3.5 h-3.5 text-[#D4756B]" fill="#D4756B" />
           <span className="font-display text-sm font-bold text-[#4A3F35]">{streak}일</span>
@@ -979,7 +1028,7 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
     <div className="space-y-4 anim-fade-up">
       {/* 날짜 + 인사 */}
       <div className="px-1">
-        <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">{dayStr}</div>
+        <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">{dayStr}</div>
         <h1 className="font-serif-ko text-[26px] leading-tight text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
           오늘도 주님과<br/>
           <span className="shine-text">함께하는 하루</span>
@@ -1097,8 +1146,8 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
           </div>
         </div>
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[11px] text-[#8B7355]">연속 {streak}일 🔥</div>
-          <div className="text-[11px] text-[#8B7355]">{weekDayCount}/7일 출석</div>
+          <div className="text-[11px] text-[#6B5640]">연속 {streak}일 🔥</div>
+          <div className="text-[11px] text-[#6B5640]">{weekDayCount}/7일 출석</div>
         </div>
         <div className="flex justify-between">
           {days.map((d, i) => {
@@ -1106,7 +1155,7 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
             const todayIdx = i === today.getDay();
             return (
               <div key={i} className="flex flex-col items-center gap-1.5">
-                <div className="text-[10px] text-[#8B7355] font-bold">{d}</div>
+                <div className="text-[10px] text-[#6B5640] font-bold">{d}</div>
                 <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${todayIdx ? 'stamp-glow' : ''}`}
                   style={{
                     background: active ? 'linear-gradient(135deg, #E9A94D, #D4756B)' : '#F5EBD8',
@@ -1218,7 +1267,7 @@ function WeeklyAttendanceModal({ weekDayCount, streak, stickers, todayDone, onCl
           onClick={onClose}
           className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#FFF8EC] flex items-center justify-center z-10"
         >
-          <X className="w-4 h-4 text-[#8B7355]" />
+          <X className="w-4 h-4 text-[#6B5640]" />
         </button>
 
         {/* 컬러 배너 */}
@@ -1259,7 +1308,7 @@ function WeeklyAttendanceModal({ weekDayCount, streak, stickers, todayDone, onCl
           <div className="paper-card rounded-2xl p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-[#4A3F35]">이번 주 출석률</span>
-              <span className="text-xs text-[#8B7355]">{weekDayCount} / 7일</span>
+              <span className="text-xs text-[#6B5640]">{weekDayCount} / 7일</span>
             </div>
             <div className="h-2 rounded-full bg-[#F5EBD8] overflow-hidden">
               <div
@@ -1270,7 +1319,7 @@ function WeeklyAttendanceModal({ weekDayCount, streak, stickers, todayDone, onCl
                 }}
               />
             </div>
-            <div className="text-[10px] text-[#8B7355] mt-2 text-center">
+            <div className="text-[10px] text-[#6B5640] mt-2 text-center">
               {daysLeftThisWeek > 0
                 ? `이번 주에 ${daysLeftThisWeek}일 더 남았어요`
                 : '이번 주의 마지막 날이에요'}
@@ -1305,13 +1354,13 @@ function WeeklyAttendanceModal({ weekDayCount, streak, stickers, todayDone, onCl
             <div className="text-center py-3">
               <div className="text-2xl mb-1">✨</div>
               <div className="text-sm font-bold text-[#7BA098]">오늘 예배 완료!</div>
-              <div className="text-[11px] text-[#8B7355] mt-0.5">내일 또 만나요</div>
+              <div className="text-[11px] text-[#6B5640] mt-0.5">내일 또 만나요</div>
             </div>
           )}
 
           {/* 격려 말씀 */}
           <div className="mt-5 pt-4 border-t border-dashed border-[#F0E2C6] text-center">
-            <div className="font-serif-ko text-xs text-[#8B7355] leading-relaxed italic">
+            <div className="font-serif-ko text-xs text-[#6B5640] leading-relaxed italic">
               "오직 나와 내 집은 여호와를 섬기겠노라"
             </div>
             <div className="text-[10px] text-[#C4B59A] mt-1 font-bold">— 여호수아 24:15</div>
@@ -1327,7 +1376,7 @@ function StatCell({ icon, value, label, color }) {
     <div className="paper-card rounded-xl p-3 text-center">
       <div className="text-xl mb-0.5">{icon}</div>
       <div className="font-display text-lg font-bold leading-none" style={{ color }}>{value}</div>
-      <div className="text-[9px] text-[#8B7355] mt-1 font-bold">{label}</div>
+      <div className="text-[9px] text-[#6B5640] mt-1 font-bold">{label}</div>
     </div>
   );
 }
@@ -1526,11 +1575,11 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
     return (
       <div className="space-y-4 anim-fade-up">
         <div>
-          <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">WORSHIP TIME</div>
+          <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">WORSHIP TIME</div>
           <h2 className="font-serif-ko text-[24px] text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
             오늘은 얼마나<br/>시간이 있으세요?
           </h2>
-          <p className="text-sm text-[#8B7355] mt-2">짧아도 괜찮아요. 꾸준한 것이 가장 소중해요.</p>
+          <p className="text-sm text-[#6B5640] mt-2">짧아도 괜찮아요. 꾸준한 것이 가장 소중해요.</p>
         </div>
 
         {[
@@ -1552,7 +1601,7 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
                   <span className="font-display text-2xl font-bold" style={{ color: opt.color }}>{opt.time}</span>
                   <span className="font-display text-base font-bold text-[#4A3F35]">{opt.title}</span>
                 </div>
-                <div className="text-xs text-[#8B7355] mt-0.5">{opt.desc}</div>
+                <div className="text-xs text-[#6B5640] mt-0.5">{opt.desc}</div>
               </div>
               <ChevronRight className="w-5 h-5 text-[#C4B59A]" />
             </div>
@@ -1578,7 +1627,7 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
       {/* 프로그래스 + 타이머 */}
       <div className="paper-card rounded-2xl p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold text-[#8B7355]">STEP {step + 1} / {steps.length}</span>
+          <span className="text-xs font-bold text-[#6B5640]">STEP {step + 1} / {steps.length}</span>
           <div className="flex items-center gap-1 text-[#4A3F35]">
             <Clock className="w-3.5 h-3.5" />
             <span className="font-display text-sm font-bold">{mm}:{ss}</span>
@@ -1726,7 +1775,7 @@ function WorshipTab({ verse, onDone, alreadyDone }) {
       {step === 0 && (
         <button
           onClick={() => setMode(null)}
-          className="w-full text-xs text-[#8B7355] underline"
+          className="w-full text-xs text-[#6B5640] underline"
         >
           시간 다시 고르기
         </button>
@@ -1759,7 +1808,7 @@ function WorshipComplete({ elapsed, onContinue }) {
       <h2 className="font-serif-ko text-3xl font-bold text-[#4A3F35] mt-4" style={{ fontWeight: 800 }}>
         예배를 잘 마쳤어요
       </h2>
-      <p className="text-[#8B7355] mt-2">오늘 {mm}분 동안 함께 하나님 앞에 섰어요</p>
+      <p className="text-[#6B5640] mt-2">오늘 {mm}분 동안 함께 하나님 앞에 섰어요</p>
 
       <div className="mt-8 paper-card rounded-[28px] p-6 text-left">
         <div className="text-center mb-4">
@@ -1819,7 +1868,7 @@ function KidsTab({ stickers, completedStories, onCompleteStory, onEarnSticker })
   return (
     <div className="space-y-5 anim-fade-up">
       <div>
-        <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">FOR KIDS</div>
+        <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">FOR KIDS</div>
         <h2 className="font-serif-ko text-[24px] text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
           어린이 <span className="shine-text">천국</span> 🌱
         </h2>
@@ -1877,7 +1926,7 @@ function KidsTab({ stickers, completedStories, onCompleteStory, onEarnSticker })
       <div>
         <div className="flex items-center justify-between mb-3 px-1">
           <h3 className="font-display text-xl font-bold text-[#4A3F35]">📚 성경 이야기</h3>
-          <span className="text-xs text-[#8B7355]">{completedStories.length}/{bibleStories.length} 완료</span>
+          <span className="text-xs text-[#6B5640]">{completedStories.length}/{bibleStories.length} 완료</span>
         </div>
         <div className="grid grid-cols-2 gap-3">
           {bibleStories.map(story => {
@@ -1928,7 +1977,7 @@ function KidsTab({ stickers, completedStories, onCompleteStory, onEarnSticker })
 function StoryView({ story, onBack, onComplete, completed }) {
   return (
     <div className="space-y-4 anim-fade-up">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-[#8B7355]">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-[#6B5640]">
         <ChevronLeft className="w-4 h-4" /> 돌아가기
       </button>
 
@@ -2024,7 +2073,7 @@ function QuizView({ onBack, onCorrect }) {
 
   return (
     <div className="space-y-4 anim-fade-up">
-      <button onClick={onBack} className="flex items-center gap-1 text-sm text-[#8B7355]">
+      <button onClick={onBack} className="flex items-center gap-1 text-sm text-[#6B5640]">
         <ChevronLeft className="w-4 h-4" /> 돌아가기
       </button>
 
@@ -2067,7 +2116,7 @@ function QuizView({ onBack, onCorrect }) {
           <div className="font-display text-xl font-bold text-[#4A3F35]">
             {result ? '정답이에요! +1 🌟' : '아쉬워요. 괜찮아요!'}
           </div>
-          <div className="text-sm text-[#8B7355] mt-1">
+          <div className="text-sm text-[#6B5640] mt-1">
             {result ? '잘했어요!' : '다음엔 맞힐 수 있어요.'}
           </div>
           <button onClick={onBack} className="mt-4 px-5 py-2 rounded-full text-white text-sm font-bold" style={{
@@ -2089,7 +2138,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
   return (
     <div className="space-y-4 anim-fade-up">
       <div>
-        <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">PRAYER NOTES</div>
+        <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">PRAYER NOTES</div>
         <h2 className="font-serif-ko text-[24px] text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
           우리 가족의 <span className="shine-text">기도 노트</span>
         </h2>
@@ -2150,7 +2199,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
                 <Logomong size={180} animate="float" variant="praying" />
               </div>
               <div className="font-display text-base text-[#4A3F35] font-bold">아직 기도 제목이 없어요</div>
-              <div className="text-xs text-[#8B7355] mt-1">오늘 하나님께 드리고 싶은 기도를 적어보세요</div>
+              <div className="text-xs text-[#6B5640] mt-1">오늘 하나님께 드리고 싶은 기도를 적어보세요</div>
             </div>
           ) : prayers.map(p => (
             <div key={p.id} className="paper-card rounded-2xl p-4 anim-fade-up">
@@ -2160,7 +2209,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-[#4A3F35] leading-relaxed">{p.text}</div>
-                  <div className="text-[10px] text-[#8B7355] mt-1">{p.date}</div>
+                  <div className="text-[10px] text-[#6B5640] mt-1">{p.date}</div>
                 </div>
               </div>
               <div className="mt-3 flex gap-2">
@@ -2173,7 +2222,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
                 </button>
                 <button
                   onClick={() => onDelete(p.id)}
-                  className="px-3 py-2 rounded-lg text-xs text-[#8B7355] soft-inset"
+                  className="px-3 py-2 rounded-lg text-xs text-[#6B5640] soft-inset"
                 >
                   삭제
                 </button>
@@ -2189,7 +2238,7 @@ function PrayerTab({ prayers, answered, onAdd, onAnswer, onDelete }) {
                 <Logomong size={180} animate="float" glow variant="surprised" />
               </div>
               <div className="font-display text-base text-[#4A3F35] font-bold">응답 받은 기도가 여기에 쌓여요</div>
-              <div className="text-xs text-[#8B7355] mt-1">하나님의 신실하심을 기록해요</div>
+              <div className="text-xs text-[#6B5640] mt-1">하나님의 신실하심을 기록해요</div>
             </div>
           ) : answered.map(p => (
             <div key={p.id} className="rounded-2xl p-4 relative overflow-hidden" style={{
@@ -2222,11 +2271,11 @@ function ChannelTab() {
   return (
     <div className="space-y-4 anim-fade-up">
       <div>
-        <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">SERMON PLAYLISTS</div>
+        <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">SERMON PLAYLISTS</div>
         <h2 className="font-serif-ko text-[24px] text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
           <span className="shine-text">말씀의지혜</span> 단일 재생목록
         </h2>
-        <p className="text-xs text-[#8B7355] mt-1">주제별 4개 시리즈를 앱에서 바로 시청</p>
+        <p className="text-xs text-[#6B5640] mt-1">주제별 4개 시리즈를 앱에서 바로 시청</p>
       </div>
 
       {/* 현재 선택된 재생목록 카드 (헤더) */}
@@ -2245,12 +2294,12 @@ function ChannelTab() {
             <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded text-white" style={{ background: current.color }}>
               #{current.tag}
             </span>
-            <span className="text-[10px] text-[#8B7355]">{current.count}편</span>
+            <span className="text-[10px] text-[#6B5640]">{current.count}편</span>
           </div>
           <div className="font-display text-base font-bold text-[#4A3F35] leading-tight truncate">
             {current.title}
           </div>
-          <div className="text-[11px] text-[#8B7355] mt-0.5 truncate">{current.subtitle}</div>
+          <div className="text-[11px] text-[#6B5640] mt-0.5 truncate">{current.subtitle}</div>
         </div>
       </div>
 
@@ -2271,7 +2320,7 @@ function ChannelTab() {
             />
           </div>
           <div className="p-3 flex items-center justify-between gap-2">
-            <div className="text-[10px] text-[#8B7355] flex-1">
+            <div className="text-[10px] text-[#6B5640] flex-1">
               ▶ 앱 안에서 자동 재생 · 전체화면 지원
             </div>
             <a
@@ -2299,7 +2348,7 @@ function ChannelTab() {
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h3 className="font-display text-lg font-bold text-[#4A3F35]">📚 재생목록 선택</h3>
-          <span className="text-[10px] text-[#8B7355]">탭=앱 내 재생 · ↗=YouTube 열기</span>
+          <span className="text-[10px] text-[#6B5640]">탭=앱 내 재생 · ↗=YouTube 열기</span>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           {PLAYLISTS.map((p, i) => {
@@ -2341,7 +2390,7 @@ function ChannelTab() {
                     }}>
                       #{p.tag}
                     </span>
-                    <span className="text-[9px]" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#8B7355' }}>
+                    <span className="text-[9px]" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#6B5640' }}>
                       {p.count}편
                     </span>
                   </div>
@@ -2688,11 +2737,11 @@ function BGMTab({ bgmControls }) {
   return (
     <div className="space-y-4 anim-fade-up">
       <div>
-        <div className="text-[11px] text-[#8B7355] tracking-[0.2em] uppercase">SACRED SOUNDS</div>
+        <div className="text-[11px] text-[#6B5640] tracking-[0.2em] uppercase">SACRED SOUNDS</div>
         <h2 className="font-serif-ko text-[24px] text-[#4A3F35] mt-1" style={{ fontWeight: 800 }}>
           우리집 <span className="shine-text">찬양쉼터</span> 🎵
         </h2>
-        <p className="text-xs text-[#8B7355] mt-1">하루의 모든 순간, 찬양과 함께하세요</p>
+        <p className="text-xs text-[#6B5640] mt-1">하루의 모든 순간, 찬양과 함께하세요</p>
       </div>
 
       {!hasAnyUrl && <BGMSetupGuide />}
@@ -2704,7 +2753,7 @@ function BGMTab({ bgmControls }) {
       <div>
         <div className="flex items-center justify-between mb-2 px-1">
           <h3 className="font-display text-lg font-bold text-[#4A3F35]">🎨 장르별 찬양</h3>
-          <span className="text-[10px] text-[#8B7355]">탭하여 전환</span>
+          <span className="text-[10px] text-[#6B5640]">탭하여 전환</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {BGM_CATEGORIES.map((c) => {
@@ -2732,7 +2781,7 @@ function BGMTab({ bgmControls }) {
                 }}>
                   {c.name}
                 </div>
-                <div className="text-[9px] mt-0.5" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#8B7355' }}>
+                <div className="text-[9px] mt-0.5" style={{ color: selected ? 'rgba(255,255,255,0.8)' : '#6B5640' }}>
                   {c.tracks.length}곡
                 </div>
               </button>
@@ -2751,7 +2800,7 @@ function BGMTab({ bgmControls }) {
           </div>
           <div className="flex-1">
             <div className="font-display text-base font-bold text-[#4A3F35] leading-none">{selectedCat.name}</div>
-            <div className="text-[10px] text-[#8B7355] mt-0.5">{selectedCat.desc}</div>
+            <div className="text-[10px] text-[#6B5640] mt-0.5">{selectedCat.desc}</div>
           </div>
         </div>
         <div className="space-y-1.5">
@@ -2773,7 +2822,7 @@ function BGMTab({ bgmControls }) {
           <div className="flex items-center gap-2 mb-3">
             <Heart className="w-4 h-4 text-[#D4756B]" fill="#D4756B" />
             <div className="font-display text-base font-bold text-[#4A3F35]">우리집 플레이리스트</div>
-            <span className="text-[10px] text-[#8B7355] ml-auto">{favoriteTracks.length}곡</span>
+            <span className="text-[10px] text-[#6B5640] ml-auto">{favoriteTracks.length}곡</span>
           </div>
           <div className="space-y-1.5">
             {favoriteTracks.map((t, i) => (
@@ -2830,7 +2879,7 @@ function RecommendedNow({ bgmControls }) {
           <div className="font-display text-lg font-bold text-[#4A3F35] leading-tight mt-0.5">
             {rec.name}
           </div>
-          <div className="text-[11px] text-[#8B7355] truncate">{t.title}</div>
+          <div className="text-[11px] text-[#6B5640] truncate">{t.title}</div>
         </div>
         <button
           onClick={() => bgmControls.playTrack(t, rec)}
@@ -2865,7 +2914,7 @@ function TrackRow({ track, category, index, bgmControls, showCategoryIcon }) {
       >
         {isCurrent && bgmControls.isPlaying
           ? <Pause className="w-4 h-4" fill="white" strokeWidth={0} />
-          : <Play className="w-4 h-4" style={{ color: isCurrent ? 'white' : '#8B7355' }} fill={isCurrent ? 'white' : '#8B7355'} strokeWidth={0} />
+          : <Play className="w-4 h-4" style={{ color: isCurrent ? 'white' : '#6B5640' }} fill={isCurrent ? 'white' : '#6B5640'} strokeWidth={0} />
         }
       </button>
       <div className="flex-1 min-w-0">
@@ -2877,7 +2926,7 @@ function TrackRow({ track, category, index, bgmControls, showCategoryIcon }) {
             {track.title}
           </div>
         </div>
-        <div className="text-[10px] text-[#8B7355] mt-0.5">
+        <div className="text-[10px] text-[#6B5640] mt-0.5">
           {ready ? `${mm}:${ss}` : '⚠ URL 미설정'}
         </div>
       </div>
@@ -3177,8 +3226,8 @@ function BottomNav({ tab, setTab }) {
                   background: active ? 'linear-gradient(135deg, #E9A94D20, #D4756B20)' : 'transparent'
                 }}
               >
-                <Icon className="w-[18px] h-[18px]" style={{ color: active ? '#D4756B' : '#8B7355' }} strokeWidth={active ? 2.5 : 2} />
-                <span className="text-[9px] font-bold" style={{ color: active ? '#D4756B' : '#8B7355' }}>
+                <Icon className="w-[18px] h-[18px]" style={{ color: active ? '#D4756B' : '#6B5640' }} strokeWidth={active ? 2.5 : 2} />
+                <span className="text-[9px] font-bold" style={{ color: active ? '#D4756B' : '#6B5640' }}>
                   {item.label}
                 </span>
               </button>
