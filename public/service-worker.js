@@ -3,7 +3,7 @@
 // 오프라인 사용 + 자동 업데이트
 // ============================================================
 
-const CACHE_VERSION = 'v0.9.8';
+const CACHE_VERSION = 'v0.9.9';
 const CACHE_NAME = `family-worship-${CACHE_VERSION}`;
 
 // 핵심 파일만 미리 캐싱 (Pre-cache)

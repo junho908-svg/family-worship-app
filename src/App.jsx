@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.8';
+const APP_VERSION = '0.9.9';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -622,16 +622,18 @@ export default function FamilyWorship() {
     save('fontSize', fontSize);
   }, [fontSize, loading]);
 
-  // v0.9.6: PWA 설치 안내 배너 로직
+  // v0.9.9: PWA 설치 이벤트 캐치 (자동 배너만 비활성화)
+  // 헤더 📲 아이콘 클릭 시 모달 + 안드로이드 자동 설치는 그대로 유지
   useEffect(() => {
     // 1) Android Chrome: beforeinstallprompt 이벤트 캐치
+    //    헤더 아이콘 모달의 "지금 추가하기" 자동 설치 버튼에 필요
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setPwaInstallEvent(e);
     };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
 
-    // v0.9.8: PWA 설치 완료 감지
+    // 2) PWA 설치 완료 감지 (헤더 아이콘 숨기기용)
     const handleAppInstalled = () => {
       setIsPwaInstalled(true);
       setPwaInstallEvent(null);
@@ -639,54 +641,24 @@ export default function FamilyWorship() {
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 2) 이미 PWA로 실행 중이면 배너 안 보임
+    // 3) 이미 PWA로 실행 중이면 헤더 아이콘 숨김
     const isInStandaloneMode =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
 
     if (isInStandaloneMode) {
       setIsPwaInstalled(true);
-      return; // PWA로 실행 중
     }
 
-    // 3) localStorage로 "안 보기" 체크
-    // v0.9.7: 자동 사라짐 = 3일, 수동 닫기 = 7일
-    const dismissedAt = localStorage.getItem('pwaPromptDismissedAt');
-    const dismissType = localStorage.getItem('pwaPromptDismissType') || 'auto';
-    if (dismissedAt) {
-      const hoursSinceDismiss = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60);
-      const blockHours = dismissType === 'manual' ? 24 * 7 : 24 * 3; // 7일 or 3일
-      if (hoursSinceDismiss < blockHours) return;
-    }
-
-    // 4) 환영 게이트 닫은 후 3초 뒤에 배너 표시 + 8초 후 자동 사라짐
-    if (welcomeShown && !loading) {
-      const showTimer = setTimeout(() => {
-        setPwaPromptVisible(true);
-
-        // 8초 후 자동 사라짐 (자동 닫기 = 3일 안 보임)
-        const hideTimer = setTimeout(() => {
-          setPwaPromptVisible(false);
-          localStorage.setItem('pwaPromptDismissedAt', Date.now().toString());
-          localStorage.setItem('pwaPromptDismissType', 'auto');
-        }, 8000);
-
-        // cleanup
-        return () => clearTimeout(hideTimer);
-      }, 3000);
-
-      return () => {
-        clearTimeout(showTimer);
-        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-        window.removeEventListener('appinstalled', handleAppInstalled);
-      };
-    }
+    // ★ v0.9.9: 자동 배너 트리거만 제거됨
+    //   - 어르신 대상이라 첫 접속 시 자동 모달 없이 깔끔하게 시작
+    //   - 설치를 원하는 사용자는 헤더 📲 아이콘을 직접 클릭
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, [welcomeShown, loading]);
+  }, []);
 
   // PWA 설치 트리거 (Android)
   const handlePwaInstall = async () => {

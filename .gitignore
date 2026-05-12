@@ -5,3 +5,6 @@ dist
 .env.local
 *.log
 .vite
+
+# 로컬 버전 백업 (GitHub에 안 올림)
+ver/
