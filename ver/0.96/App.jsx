@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.7';
+const APP_VERSION = '0.9.6';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -634,34 +634,18 @@ export default function FamilyWorship() {
 
     if (isInStandaloneMode) return; // PWA로 실행 중
 
-    // 3) localStorage로 "안 보기" 체크
-    // v0.9.7: 자동 사라짐 = 3일, 수동 닫기 = 7일
+    // 3) localStorage로 "오늘 안 보기" 체크
     const dismissedAt = localStorage.getItem('pwaPromptDismissedAt');
-    const dismissType = localStorage.getItem('pwaPromptDismissType') || 'auto';
     if (dismissedAt) {
-      const hoursSinceDismiss = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60);
-      const blockHours = dismissType === 'manual' ? 24 * 7 : 24 * 3; // 7일 or 3일
-      if (hoursSinceDismiss < blockHours) return;
+      const daysSinceDismiss = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSinceDismiss < 7) return; // 7일 안 보임
     }
 
-    // 4) 환영 게이트 닫은 후 3초 뒤에 배너 표시 + 8초 후 자동 사라짐
+    // 4) 환영 게이트 닫은 후 3초 뒤에 배너 표시
     if (welcomeShown && !loading) {
-      const showTimer = setTimeout(() => {
-        setPwaPromptVisible(true);
-
-        // 8초 후 자동 사라짐 (자동 닫기 = 3일 안 보임)
-        const hideTimer = setTimeout(() => {
-          setPwaPromptVisible(false);
-          localStorage.setItem('pwaPromptDismissedAt', Date.now().toString());
-          localStorage.setItem('pwaPromptDismissType', 'auto');
-        }, 8000);
-
-        // cleanup
-        return () => clearTimeout(hideTimer);
-      }, 3000);
-
+      const timer = setTimeout(() => setPwaPromptVisible(true), 3000);
       return () => {
-        clearTimeout(showTimer);
+        clearTimeout(timer);
         window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       };
     }
@@ -682,11 +666,10 @@ export default function FamilyWorship() {
     }
   };
 
-  // PWA 배너 닫기 (수동 = 7일 안 보임)
+  // PWA 배너 닫기 (7일 안 보임)
   const handlePwaDismiss = () => {
     setPwaPromptVisible(false);
     localStorage.setItem('pwaPromptDismissedAt', Date.now().toString());
-    localStorage.setItem('pwaPromptDismissType', 'manual');
   };
 
   // 글씨 크기 토글 핸들러 (작게→보통→크게→아주크게→다시 작게)
@@ -999,60 +982,54 @@ function PwaInstallBanner({ installEvent, onInstall, onDismiss }) {
 
   return (
     <div
-      className="fixed paper-card rounded-2xl anim-fade-up"
+      className="fixed left-1/2 transform -translate-x-1/2 paper-card rounded-2xl p-4 anim-fade-up"
       style={{
         bottom: 'calc(80px + env(safe-area-inset-bottom))',
-        left: '12px',
-        right: '12px',
         zIndex: 90,
-        maxWidth: '440px',
-        margin: '0 auto',
+        maxWidth: '92%',
+        width: '440px',
         background: 'linear-gradient(135deg, #FFFEF9, #FFF8EC)',
         border: '1.5px solid #F0E2C6',
-        boxShadow: '0 12px 32px -8px rgba(74, 63, 53, 0.18)',
-        padding: '14px'
+        boxShadow: '0 12px 32px -8px rgba(74, 63, 53, 0.18)'
       }}
     >
-      {/* 상단: 제목 + 닫기 버튼 (별도 행) */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-2">
-          <div className="flex-shrink-0">
-            <Logomong size={36} animate="bounce" variant="welcome" />
-          </div>
-          <div className="font-display text-[15px] font-bold text-[#4A3F35]" style={{ wordBreak: 'keep-all' }}>
+      <div className="flex items-start gap-3">
+        {/* 로고몽 */}
+        <div className="flex-shrink-0">
+          <Logomong size={56} animate="bounce" glow variant="welcome" />
+        </div>
+
+        {/* 안내 텍스트 */}
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-base font-bold text-[#4A3F35] mb-1">
             홈 화면에 추가하세요! 🏠
           </div>
+          <div className="text-xs text-[#6B5640] leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+            {isIOS && (
+              <>
+                <span className="font-bold text-[#D4756B]">⬆️ 공유 버튼</span> 누른 후{' '}
+                <span className="font-bold text-[#D4756B]">"홈 화면에 추가"</span>를 선택하시면<br/>
+                앱처럼 편하게 사용하실 수 있어요!
+              </>
+            )}
+            {isAndroid && installEvent && (
+              <>아래 버튼을 누르시면 앱처럼 홈 화면에 추가됩니다.<br/>주소창·탭 없이 편하게 사용하세요!</>
+            )}
+            {!isIOS && !isAndroid && (
+              <>브라우저 메뉴에서 "홈 화면에 추가"를 선택하시면 앱처럼 사용할 수 있어요.</>
+            )}
+          </div>
         </div>
+
+        {/* 닫기 버튼 */}
         <button
           onClick={onDismiss}
-          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
-          style={{ background: '#F0E2C6' }}
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-[#F0E2C6] transition-colors"
           aria-label="배너 닫기 (7일간 안 보임)"
           title="7일간 안 보임"
         >
-          <span className="text-[#8B5E3C] text-lg leading-none" style={{ marginTop: '-2px' }}>×</span>
+          <span className="text-[#8B5E3C] text-xl leading-none">×</span>
         </button>
-      </div>
-
-      {/* 안내 텍스트 (전체 폭 사용) */}
-      <div
-        className="text-xs text-[#6B5640] leading-relaxed"
-        style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
-      >
-        {isIOS && (
-          <>
-            <span className="font-bold text-[#D4756B]">⬆️ 공유 버튼</span>{' '}
-            누른 후{' '}
-            <span className="font-bold text-[#D4756B]">"홈 화면에 추가"</span>를{' '}
-            선택하시면 앱처럼 편하게 사용하실 수 있어요!
-          </>
-        )}
-        {isAndroid && installEvent && (
-          <>아래 버튼을 누르시면 앱처럼 홈 화면에 추가됩니다. 주소창·탭 없이 편하게 사용하세요!</>
-        )}
-        {!isIOS && !isAndroid && (
-          <>브라우저 메뉴에서 "홈 화면에 추가"를 선택하시면 앱처럼 사용할 수 있어요.</>
-        )}
       </div>
 
       {/* Android 전용: 설치 버튼 */}
@@ -1068,11 +1045,6 @@ function PwaInstallBanner({ installEvent, onInstall, onDismiss }) {
           ✨ 홈 화면에 추가하기
         </button>
       )}
-
-      {/* 자동 사라짐 안내 (작게) */}
-      <div className="mt-2 text-[10px] text-[#8B7355] text-center opacity-70">
-        잠시 후 자동으로 사라져요 · 다시 보려면 새로고침
-      </div>
     </div>
   );
 }

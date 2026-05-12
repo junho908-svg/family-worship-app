@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- 기본 정보 -->
+    <title>우리집 가정예배</title>
+    <meta name="description" content="바쁜 가정을 위한 5분 가정예배 도우미. 말씀, 기도, 찬양으로 가족이 하나되는 시간을 만들어요." />
+
+    <!-- ============ v0.9.6 PWA 메타 태그 ============ -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- iOS Safari 전용 PWA 설정 -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="우리집 가정예배" />
+
+    <!-- iOS 홈 화면 아이콘 -->
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png" />
+
+    <!-- 브라우저 테마 색상 (Android Chrome 주소창 색) -->
+    <meta name="theme-color" content="#E9A94D" />
+
+    <!-- 파비콘 (브라우저 탭 아이콘) -->
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png" />
+
+    <!-- Open Graph (카톡·SNS 공유 시 미리보기) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="우리집 가정예배" />
+    <meta property="og:description" content="바쁜 가정을 위한 5분 가정예배 도우미" />
+    <meta property="og:image" content="https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png" />
+    <meta property="og:locale" content="ko_KR" />
+
+    <!-- 폰트 (성능 최적화 - preconnect) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@300;400;700&family=Gowun+Dodum&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ============ v0.9.6 Service Worker 등록 ============ -->
+    <script>
+      // 프로덕션 환경에서만 Service Worker 등록 (개발 시 캐시 충돌 방지)
+      if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+              console.log('[App] Service Worker 등록 성공:', registration.scope);
+
+              // 새 버전 감지 시 사용자에게 알림 (선택)
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('[App] 새 버전 감지! 새로고침 시 적용');
+                    // 자동 적용: 새 SW에 SKIP_WAITING 메시지
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+            })
+            .catch((err) => {
+              console.error('[App] Service Worker 등록 실패:', err);
+            });
+
+          // SW가 활성화되면 페이지 새로고침 (새 버전 즉시 반영)
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            console.log('[App] 새 버전 적용 - 페이지 새로고침');
+            window.location.reload();
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
