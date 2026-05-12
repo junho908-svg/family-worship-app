@@ -12,28 +12,16 @@
   "categories": ["lifestyle", "education", "books"],
   "icons": [
     {
-      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png",
+      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png",
+      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://cdn.jsdelivr.net/gh/junho908-svg/family-worship-bgm@main/logomong/pose4_hugging.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ]
 }
