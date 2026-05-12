@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.5';
+const APP_VERSION = '0.9.6';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -521,6 +521,10 @@ export default function FamilyWorship() {
   const [sleepTimer, setSleepTimer] = useState(null); // minutes remaining
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [welcomeShown, setWelcomeShown] = useState(false);
+
+  // v0.9.6: PWA 홈 화면 추가 안내 배너 상태
+  const [pwaPromptVisible, setPwaPromptVisible] = useState(false);
+  const [pwaInstallEvent, setPwaInstallEvent] = useState(null);
   const sleepTimerRef = useRef(null);
 
   const [verseIndex] = useState(() => {
@@ -613,6 +617,60 @@ export default function FamilyWorship() {
     // 저장
     save('fontSize', fontSize);
   }, [fontSize, loading]);
+
+  // v0.9.6: PWA 설치 안내 배너 로직
+  useEffect(() => {
+    // 1) Android Chrome: beforeinstallprompt 이벤트 캐치
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setPwaInstallEvent(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // 2) 이미 PWA로 실행 중이면 배너 안 보임
+    const isInStandaloneMode =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if (isInStandaloneMode) return; // PWA로 실행 중
+
+    // 3) localStorage로 "오늘 안 보기" 체크
+    const dismissedAt = localStorage.getItem('pwaPromptDismissedAt');
+    if (dismissedAt) {
+      const daysSinceDismiss = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60 * 24);
+      if (daysSinceDismiss < 7) return; // 7일 안 보임
+    }
+
+    // 4) 환영 게이트 닫은 후 3초 뒤에 배너 표시
+    if (welcomeShown && !loading) {
+      const timer = setTimeout(() => setPwaPromptVisible(true), 3000);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      };
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, [welcomeShown, loading]);
+
+  // PWA 설치 트리거 (Android)
+  const handlePwaInstall = async () => {
+    if (pwaInstallEvent) {
+      pwaInstallEvent.prompt();
+      const { outcome } = await pwaInstallEvent.userChoice;
+      if (outcome === 'accepted') {
+        console.log('사용자가 PWA 설치 동의');
+      }
+      setPwaInstallEvent(null);
+      setPwaPromptVisible(false);
+    }
+  };
+
+  // PWA 배너 닫기 (7일 안 보임)
+  const handlePwaDismiss = () => {
+    setPwaPromptVisible(false);
+    localStorage.setItem('pwaPromptDismissedAt', Date.now().toString());
+  };
 
   // 글씨 크기 토글 핸들러 (작게→보통→크게→아주크게→다시 작게)
   const handleFontSizeToggle = () => {
@@ -901,8 +959,92 @@ export default function FamilyWorship() {
           <FullPlayerModal {...bgmControls} onClose={() => setShowPlayerModal(false)} />
         )}
 
+        {/* v0.9.6: PWA 홈 화면 추가 안내 배너 */}
+        {pwaPromptVisible && (
+          <PwaInstallBanner
+            installEvent={pwaInstallEvent}
+            onInstall={handlePwaInstall}
+            onDismiss={handlePwaDismiss}
+          />
+        )}
+
         <BottomNav tab={tab} setTab={setTab} />
       </div>
+    </div>
+  );
+}
+
+// ============ v0.9.6: PWA 홈 화면 추가 안내 배너 ============
+function PwaInstallBanner({ installEvent, onInstall, onDismiss }) {
+  // iOS 감지 (Android에는 beforeinstallprompt 이벤트로 자동 처리)
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isAndroid = /Android/.test(navigator.userAgent);
+
+  return (
+    <div
+      className="fixed left-1/2 transform -translate-x-1/2 paper-card rounded-2xl p-4 anim-fade-up"
+      style={{
+        bottom: 'calc(80px + env(safe-area-inset-bottom))',
+        zIndex: 90,
+        maxWidth: '92%',
+        width: '440px',
+        background: 'linear-gradient(135deg, #FFFEF9, #FFF8EC)',
+        border: '1.5px solid #F0E2C6',
+        boxShadow: '0 12px 32px -8px rgba(74, 63, 53, 0.18)'
+      }}
+    >
+      <div className="flex items-start gap-3">
+        {/* 로고몽 */}
+        <div className="flex-shrink-0">
+          <Logomong size={56} animate="bounce" glow variant="welcome" />
+        </div>
+
+        {/* 안내 텍스트 */}
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-base font-bold text-[#4A3F35] mb-1">
+            홈 화면에 추가하세요! 🏠
+          </div>
+          <div className="text-xs text-[#6B5640] leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+            {isIOS && (
+              <>
+                <span className="font-bold text-[#D4756B]">⬆️ 공유 버튼</span> 누른 후{' '}
+                <span className="font-bold text-[#D4756B]">"홈 화면에 추가"</span>를 선택하시면<br/>
+                앱처럼 편하게 사용하실 수 있어요!
+              </>
+            )}
+            {isAndroid && installEvent && (
+              <>아래 버튼을 누르시면 앱처럼 홈 화면에 추가됩니다.<br/>주소창·탭 없이 편하게 사용하세요!</>
+            )}
+            {!isIOS && !isAndroid && (
+              <>브라우저 메뉴에서 "홈 화면에 추가"를 선택하시면 앱처럼 사용할 수 있어요.</>
+            )}
+          </div>
+        </div>
+
+        {/* 닫기 버튼 */}
+        <button
+          onClick={onDismiss}
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center hover:bg-[#F0E2C6] transition-colors"
+          aria-label="배너 닫기 (7일간 안 보임)"
+          title="7일간 안 보임"
+        >
+          <span className="text-[#8B5E3C] text-xl leading-none">×</span>
+        </button>
+      </div>
+
+      {/* Android 전용: 설치 버튼 */}
+      {isAndroid && installEvent && (
+        <button
+          onClick={onInstall}
+          className="w-full mt-3 py-2.5 rounded-xl font-display text-sm font-bold text-white transition-all active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, #E9A94D, #D4756B)',
+            boxShadow: '0 4px 12px -4px rgba(212, 117, 107, 0.5)'
+          }}
+        >
+          ✨ 홈 화면에 추가하기
+        </button>
+      )}
     </div>
   );
 }
