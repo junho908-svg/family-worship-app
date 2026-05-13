@@ -306,7 +306,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.9';
+const APP_VERSION = '0.9.10';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
