@@ -3,7 +3,7 @@
 // 오프라인 사용 + 자동 업데이트
 // ============================================================
 
-const CACHE_VERSION = 'v0.9.9';
+const CACHE_VERSION = 'v0.9.10';
 const CACHE_NAME = `family-worship-${CACHE_VERSION}`;
 
 // 핵심 파일만 미리 캐싱 (Pre-cache)
@@ -66,7 +66,7 @@ self.addEventListener('fetch', (event) => {
 
   // 1차: jsDelivr CDN의 BGM 오디오 파일 → 캐시 우선 (Cache First)
   // 한 번 받으면 거의 안 바뀌고, 용량 크므로 캐시 우선
-  if (request.url.includes('cdn.jsdelivr.net') && request.url.match(/\.(mp3|m4a|ogg|wav)/i)) {
+  if (request.url.includes('raw.githubusercontent.com') && request.url.match(/\.(mp3|m4a|ogg|wav)/i)) {
     event.respondWith(cacheFirst(request));
     return;
   }
