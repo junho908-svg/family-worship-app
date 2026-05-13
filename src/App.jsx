@@ -274,7 +274,7 @@ const GITHUB_USER = 'junho908-svg';
 const GITHUB_REPO = 'family-worship-bgm';
 const GITHUB_BRANCH = 'main';
 const toGitHubRawUrl = (filename) =>
-  `https://cdn.jsdelivr.net/gh/${GITHUB_USER}/${GITHUB_REPO}@${GITHUB_BRANCH}/${encodeURIComponent(filename)}`;
+  `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${encodeURIComponent(filename)}`;
 
 // 말씀의지혜 마스코트 (로고몽)
 // ?v=숫자를 바꾸면 캐시를 무시하고 최신 이미지를 가져옵니다
