@@ -300,7 +300,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.12';
+const APP_VERSION = '0.9.13';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -952,6 +952,7 @@ export default function FamilyWorship() {
               onFontSizeToggle={handleFontSizeToggle}
               isPwaInstalled={isPwaInstalled}
               onPwaIconClick={handlePwaModalOpen}
+              onLogoClick={() => setTab('home')}
             />
 
             {tab === 'home' && (
@@ -1286,18 +1287,18 @@ function PwaInstallModal({ installEvent, onInstall, onClose }) {
 }
 
 // ============ 헤더 ============
-function Header({ streak, stickers, fontSize, onFontSizeToggle, isPwaInstalled, onPwaIconClick }) {
+function Header({ streak, stickers, fontSize, onFontSizeToggle, isPwaInstalled, onPwaIconClick, onLogoClick }) {
   // v0.9.5: 글씨 크기 라벨
   const FONT_SIZE_LABELS = ['작게', '보통', '크게', '아주크게'];
   const FONT_SIZE_DOTS = ['·', '··', '···', '····'];
 
   return (
     <div className="flex items-center justify-between py-4 anim-fade-up">
-      <div className="flex items-center gap-3">
-        <div className="relative">
+      <button className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity active:scale-95" onClick={onLogoClick} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left' }}>
+        <div className="relative" style={{ pointerEvents: 'none' }}>
           <Logomong size={100} animate="float" variant="hugging" />
         </div>
-        <div>
+        <div style={{ pointerEvents: 'none' }}>
           <div className="flex items-center gap-1.5">
             <div className="font-display text-2xl leading-none text-[#4A3F35]">우리집 예배</div>
             <span
@@ -1313,7 +1314,7 @@ function Header({ streak, stickers, fontSize, onFontSizeToggle, isPwaInstalled, 
           {/* v0.9.5: 명도 대비 강화 (#8B7355 → #6B5640) */}
           <div className="text-[11px] text-[#6B5640] mt-1 tracking-wider">v{APP_VERSION} · 로고몽과 함께</div>
         </div>
-      </div>
+      </button>
       <div className="flex items-center gap-1.5">
         {/* v0.9.8: PWA 홈 화면 추가 아이콘 (설치 안 된 상태에만 표시) */}
         {!isPwaInstalled && onPwaIconClick && (
