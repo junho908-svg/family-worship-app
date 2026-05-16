@@ -300,7 +300,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.11';
+const APP_VERSION = '0.9.12';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -961,6 +961,9 @@ export default function FamilyWorship() {
                 stickers={stickers}
                 onStartWorship={() => setTab('worship')}
                 onOpenBGM={() => setTab('bgm')}
+                onGoToKids={() => setTab('kids')}
+                onGoToPrayer={() => setTab('prayer')}
+                onGoToMedia={() => setTab('channel')}
                 lastDate={lastDate}
                 bgmControls={bgmControls}
               />
@@ -1356,7 +1359,7 @@ function Header({ streak, stickers, fontSize, onFontSizeToggle, isPwaInstalled, 
 }
 
 // ============ 홈 탭 ============
-function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate, bgmControls }) {
+function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, onGoToKids, onGoToPrayer, onGoToMedia, lastDate, bgmControls }) {
   const todayDone = lastDate === new Date().toDateString();
   const today = new Date();
   const days = ['일', '월', '화', '수', '목', '금', '토'];
@@ -1497,9 +1500,9 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
 
       {/* 빠른 메뉴 */}
       <div className="grid grid-cols-3 gap-2.5">
-        <QuickCard icon="🌱" title="어린이" desc="성경 이야기" color="#A8C686" />
-        <QuickCard icon="🙏" title="기도 노트" desc={`${0}개`} color="#D4756B" />
-        <QuickCard icon="✨" title="말씀의지혜" desc="최신 영상" color="#9B7EBD" />
+        <QuickCard icon="🌱" title="어린이" desc="성경 이야기" color="#A8C686" onClick={onGoToKids} />
+        <QuickCard icon="🙏" title="기도 노트" desc={`${0}개`} color="#D4756B" onClick={onGoToPrayer} />
+        <QuickCard icon="✨" title="말씀의지혜" desc="최신 영상" color="#9B7EBD" onClick={onGoToMedia} />
       </div>
 
       {/* 지금 듣기 — 시간대별 BGM 추천 */}
@@ -1618,9 +1621,9 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
   );
 }
 
-function QuickCard({ icon, title, desc, color }) {
+function QuickCard({ icon, title, desc, color, onClick }) {
   return (
-    <div className="paper-card rounded-2xl p-3 text-center transition-transform active:scale-95 cursor-pointer">
+    <div className="paper-card rounded-2xl p-3 text-center transition-transform active:scale-95 cursor-pointer" onClick={onClick}>
       <div className="text-2xl mb-1 anim-float" style={{ animationDelay: Math.random() + 's' }}>{icon}</div>
       <div className="font-display text-sm font-bold text-[#4A3F35] leading-none">{title}</div>
       <div className="text-[10px] mt-1" style={{ color }}>{desc}</div>
