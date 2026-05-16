@@ -6,16 +6,10 @@ import {
   Pause, SkipForward, SkipBack, Volume2, Timer, Music2
 } from 'lucide-react';
 
+import verses365Data from './data/verses-365.json';
+import holidaysData from './data/holidays.json';
+
 // ============ 데이터 ============
-const todayVerses = [
-  { ref: '빌립보서 4:13', text: '내게 능력 주시는 자 안에서 내가 모든 것을 할 수 있느니라', theme: '용기' },
-  { ref: '시편 23:1', text: '여호와는 나의 목자시니 내게 부족함이 없으리로다', theme: '평안' },
-  { ref: '잠언 3:5-6', text: '네 마음을 다하여 여호와를 신뢰하고 네 명철을 의지하지 말라', theme: '신뢰' },
-  { ref: '요한복음 3:16', text: '하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니', theme: '사랑' },
-  { ref: '마태복음 6:33', text: '너희는 먼저 그의 나라와 그의 의를 구하라', theme: '우선순위' },
-  { ref: '이사야 41:10', text: '두려워하지 말라 내가 너와 함께 함이라', theme: '위로' },
-  { ref: '시편 119:105', text: '주의 말씀은 내 발에 등이요 내 길에 빛이니이다', theme: '인도' },
-];
 
 const bibleStories = [
   {
@@ -306,7 +300,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.10';
+const APP_VERSION = '0.9.11';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -531,11 +525,26 @@ export default function FamilyWorship() {
   const [isPwaInstalled, setIsPwaInstalled] = useState(false);
   const sleepTimerRef = useRef(null);
 
-  const [verseIndex] = useState(() => {
-    const day = new Date().getDate();
-    return day % todayVerses.length;
+  const [todayVerse] = useState(() => {
+    const today = new Date();
+
+    // 1. 절기 우선 매칭 (MM-DD)
+    const mmdd = String(today.getMonth() + 1).padStart(2, '0') + '-' +
+                 String(today.getDate()).padStart(2, '0');
+    const holiday = holidaysData.holidays.find(h => h.date === mmdd);
+    if (holiday) {
+      return { ref: holiday.ref, text: holiday.text, theme: holiday.theme, isHoliday: true, holidayName: holiday.name };
+    }
+
+    // 2. 일반 말씀 (Day of Year 기반 순환)
+    const startOfYear = new Date(today.getFullYear(), 0, 0);
+    const diff = today - startOfYear;
+    const doy = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const verses = verses365Data.verses;
+    const idx = (doy - 1) % verses.length;
+    return { ...verses[idx], isHoliday: false };
   });
-  const verse = todayVerses[verseIndex];
+  const verse = todayVerse;
 
   // 로드
   useEffect(() => {
@@ -1425,6 +1434,21 @@ function HomeTab({ verse, streak, stickers, onStartWorship, onOpenBGM, lastDate,
             <Feather className="w-3.5 h-3.5 text-[#8B5E3C]" />
             <span className="text-[10px] font-bold text-[#8B5E3C] tracking-[0.3em]">TODAY'S VERSE</span>
           </div>
+          {verse.isHoliday && (() => {
+            const emojiMap = {
+              '신년': '🌅', '어버이날': '🌷', '스승의날': '📖', '부부의날': '💑',
+              '가정의달': '🏡', '맥추절': '🌾', '추수감사': '🍂', '종교개혁': '📜',
+              '대림절': '🕯️', '성탄전야': '⭐', '성탄절': '🎄', '송구영신': '🌙',
+            };
+            const emoji = emojiMap[verse.theme] || '✨';
+            return (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full mb-2"
+                style={{ background: 'linear-gradient(135deg, #E9A94D, #D4756B)', boxShadow: '0 2px 8px rgba(233,169,77,0.4)' }}>
+                <span style={{ fontSize: '16px' }}>{emoji}</span>
+                <span className="font-bold text-white" style={{ fontSize: '15px' }}>{verse.holidayName}</span>
+              </div>
+            );
+          })()}
           <div className="inline-block px-2.5 py-1 rounded-full bg-white/60 backdrop-blur-sm mb-3">
             <span className="text-[11px] font-bold text-[#8B5E3C]">#{verse.theme}</span>
           </div>
