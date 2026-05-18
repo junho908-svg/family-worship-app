@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import SplashScreen from './components/SplashScreen';
 import {
   Home, BookOpen, Heart, Sparkles, Users, Play, Check, Plus, X, Star,
   ChevronRight, ChevronLeft, Award, Flame, Music, Clock, Send,
@@ -300,7 +301,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.13';
+const APP_VERSION = '0.9.14';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -493,6 +494,7 @@ const isValidPlaylistId = (id) => id && id.startsWith('PL') && !id.startsWith('P
 // ============ 메인 ============
 export default function FamilyWorship() {
   const [tab, setTab] = useState('home');
+  const [showSplash, setShowSplash] = useState(false);
   const [streak, setStreak] = useState(0);
   const [stickers, setStickers] = useState(0);
   const [lastDate, setLastDate] = useState(null);
@@ -690,6 +692,11 @@ export default function FamilyWorship() {
   };
 
   // v0.9.8: 헤더 아이콘 클릭 → PWA 안내 모달 열기
+  const handleLogoClick = useCallback(() => {
+    setTab('home');
+    setShowSplash(true);
+  }, []);
+
   const handlePwaModalOpen = () => {
     setPwaModalOpen(true);
   };
@@ -932,6 +939,14 @@ export default function FamilyWorship() {
       {/* 전역 오디오 엘리먼트 */}
       <audio ref={audioRef} preload="auto" />
 
+      {/* 스플래시 스크린 (로고 클릭 시) */}
+      {showSplash && (
+        <SplashScreen
+          logoUrl={LOGOMONG_VARIANTS.hugging}
+          onComplete={() => setShowSplash(false)}
+        />
+      )}
+
       {/* 웰컴 게이트 (앱 첫 진입 시) */}
       {!loading && !welcomeShown && (
         <WelcomeGate onEnter={handleEnterApp} verse={verse} />
@@ -952,7 +967,7 @@ export default function FamilyWorship() {
               onFontSizeToggle={handleFontSizeToggle}
               isPwaInstalled={isPwaInstalled}
               onPwaIconClick={handlePwaModalOpen}
-              onLogoClick={() => setTab('home')}
+              onLogoClick={handleLogoClick}
             />
 
             {tab === 'home' && (
