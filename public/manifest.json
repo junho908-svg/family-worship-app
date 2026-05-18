@@ -6,7 +6,7 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#FFFDF7",
+  "background_color": "#FFF4D2",
   "theme_color": "#E9A94D",
   "lang": "ko",
   "categories": ["lifestyle", "education", "books"],
