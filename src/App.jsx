@@ -301,7 +301,7 @@ const LOGOMONG_VARIANTS = {
 };
 
 // 앱 버전 (베타 단계 - 가족·교회 피드백을 받으며 발전 중)
-const APP_VERSION = '0.9.14';
+const APP_VERSION = '0.9.15';
 const APP_STAGE = 'BETA';
 const APP_RELEASE_DATE = '2026.04.21';
 
@@ -551,28 +551,33 @@ export default function FamilyWorship() {
   // 로드
   useEffect(() => {
     const load = async () => {
-      try {
-        const get = async (k, def) => {
+      const get = async (k, def) => {
+        try {
+          if (typeof window !== 'undefined' && window.storage) {
+            const r = await window.storage.get(k);
+            return r?.value ? JSON.parse(r.value) : def;
+          }
+          // Vite/브라우저 환경: localStorage 폴백
+          const r = localStorage.getItem(k);
+          return r ? JSON.parse(r) : def;
+        } catch { return def; }
+      };
+      await Promise.all([
+        (async () => {
           try {
-            if (typeof window !== 'undefined' && window.storage) {
-              const r = await window.storage.get(k);
-              return r?.value ? JSON.parse(r.value) : def;
-            }
-            // Vite/브라우저 환경: localStorage 폴백
-            const r = localStorage.getItem(k);
-            return r ? JSON.parse(r) : def;
-          } catch { return def; }
-        };
-        setStreak(await get('streak', 0));
-        setStickers(await get('stickers', 0));
-        setLastDate(await get('lastDate', null));
-        setPrayers(await get('prayers', []));
-        setAnswered(await get('answered', []));
-        setCompletedStories(await get('completedStories', []));
-        setFavorites(await get('favorites', []));
-        // v0.9.5: 글씨 크기 설정 복원 (기본값 1=보통)
-        setFontSize(await get('fontSize', 1));
-      } catch (e) { /* noop */ }
+            setStreak(await get('streak', 0));
+            setStickers(await get('stickers', 0));
+            setLastDate(await get('lastDate', null));
+            setPrayers(await get('prayers', []));
+            setAnswered(await get('answered', []));
+            setCompletedStories(await get('completedStories', []));
+            setFavorites(await get('favorites', []));
+            // v0.9.5: 글씨 크기 설정 복원 (기본값 1=보통)
+            setFontSize(await get('fontSize', 1));
+          } catch (e) { /* noop */ }
+        })(),
+        new Promise(resolve => setTimeout(resolve, 1000)),
+      ]);
       setLoading(false);
     };
     load();
@@ -953,91 +958,92 @@ export default function FamilyWorship() {
       )}
 
       <div className={`font-body max-w-[480px] mx-auto pt-2 px-4 min-h-screen transition-all ${currentTrack ? 'pb-44' : 'pb-28'}`}>
-        {loading && (
-          <div className="flex items-center justify-center min-h-[80vh]">
-            <div className="text-[#4A3F35] font-display text-2xl anim-float">가정예배를 준비하고 있어요...</div>
-          </div>
-        )}
-        {!loading && welcomeShown && (
+        {loading ? (
+          <SplashScreen logoUrl={LOGOMONG_VARIANTS.hugging} autoHide={false} />
+        ) : (
           <>
-            <Header
-              streak={streak}
-              stickers={stickers}
-              fontSize={fontSize}
-              onFontSizeToggle={handleFontSizeToggle}
-              isPwaInstalled={isPwaInstalled}
-              onPwaIconClick={handlePwaModalOpen}
-              onLogoClick={handleLogoClick}
-            />
+            {welcomeShown && (
+              <>
+                <Header
+                  streak={streak}
+                  stickers={stickers}
+                  fontSize={fontSize}
+                  onFontSizeToggle={handleFontSizeToggle}
+                  isPwaInstalled={isPwaInstalled}
+                  onPwaIconClick={handlePwaModalOpen}
+                  onLogoClick={handleLogoClick}
+                />
 
-            {tab === 'home' && (
-              <HomeTab
-                verse={verse}
-                streak={streak}
-                stickers={stickers}
-                onStartWorship={() => setTab('worship')}
-                onOpenBGM={() => setTab('bgm')}
-                onGoToKids={() => setTab('kids')}
-                onGoToPrayer={() => setTab('prayer')}
-                onGoToMedia={() => setTab('channel')}
-                lastDate={lastDate}
-                bgmControls={bgmControls}
+                {tab === 'home' && (
+                  <HomeTab
+                    verse={verse}
+                    streak={streak}
+                    stickers={stickers}
+                    onStartWorship={() => setTab('worship')}
+                    onOpenBGM={() => setTab('bgm')}
+                    onGoToKids={() => setTab('kids')}
+                    onGoToPrayer={() => setTab('prayer')}
+                    onGoToMedia={() => setTab('channel')}
+                    lastDate={lastDate}
+                    bgmControls={bgmControls}
+                  />
+                )}
+                {tab === 'worship' && (
+                  <WorshipTab verse={verse} onDone={markWorshipDone} alreadyDone={lastDate === new Date().toDateString()} />
+                )}
+                {tab === 'kids' && (
+                  <KidsTab
+                    stickers={stickers}
+                    completedStories={completedStories}
+                    onCompleteStory={completeStory}
+                    onEarnSticker={(n) => { const ns = stickers + n; setStickers(ns); save('stickers', ns); }}
+                  />
+                )}
+                {tab === 'prayer' && (
+                  <PrayerTab
+                    prayers={prayers}
+                    answered={answered}
+                    onAdd={addPrayer}
+                    onAnswer={answerPrayer}
+                    onDelete={deletePrayer}
+                  />
+                )}
+                {tab === 'bgm' && <BGMTab bgmControls={bgmControls} />}
+                {tab === 'channel' && <ChannelTab />}
+              </>
+            )}
+
+            {/* 미니 플레이어 */}
+            {currentTrack && !showPlayerModal && (
+              <MiniPlayer {...bgmControls} />
+            )}
+
+            {/* 풀 플레이어 모달 */}
+            {showPlayerModal && currentTrack && (
+              <FullPlayerModal {...bgmControls} onClose={() => setShowPlayerModal(false)} />
+            )}
+
+            {/* v0.9.6: PWA 홈 화면 추가 안내 배너 */}
+            {pwaPromptVisible && (
+              <PwaInstallBanner
+                installEvent={pwaInstallEvent}
+                onInstall={handlePwaInstall}
+                onDismiss={handlePwaDismiss}
               />
             )}
-            {tab === 'worship' && (
-              <WorshipTab verse={verse} onDone={markWorshipDone} alreadyDone={lastDate === new Date().toDateString()} />
-            )}
-            {tab === 'kids' && (
-              <KidsTab
-                stickers={stickers}
-                completedStories={completedStories}
-                onCompleteStory={completeStory}
-                onEarnSticker={(n) => { const ns = stickers + n; setStickers(ns); save('stickers', ns); }}
+
+            {/* v0.9.8: PWA 안내 모달 (헤더 아이콘 클릭 시) */}
+            {pwaModalOpen && (
+              <PwaInstallModal
+                installEvent={pwaInstallEvent}
+                onInstall={handlePwaModalInstall}
+                onClose={() => setPwaModalOpen(false)}
               />
             )}
-            {tab === 'prayer' && (
-              <PrayerTab
-                prayers={prayers}
-                answered={answered}
-                onAdd={addPrayer}
-                onAnswer={answerPrayer}
-                onDelete={deletePrayer}
-              />
-            )}
-            {tab === 'bgm' && <BGMTab bgmControls={bgmControls} />}
-            {tab === 'channel' && <ChannelTab />}
+
+            <BottomNav tab={tab} setTab={setTab} />
           </>
         )}
-
-        {/* 미니 플레이어 */}
-        {currentTrack && !showPlayerModal && (
-          <MiniPlayer {...bgmControls} />
-        )}
-
-        {/* 풀 플레이어 모달 */}
-        {showPlayerModal && currentTrack && (
-          <FullPlayerModal {...bgmControls} onClose={() => setShowPlayerModal(false)} />
-        )}
-
-        {/* v0.9.6: PWA 홈 화면 추가 안내 배너 */}
-        {pwaPromptVisible && (
-          <PwaInstallBanner
-            installEvent={pwaInstallEvent}
-            onInstall={handlePwaInstall}
-            onDismiss={handlePwaDismiss}
-          />
-        )}
-
-        {/* v0.9.8: PWA 안내 모달 (헤더 아이콘 클릭 시) */}
-        {pwaModalOpen && (
-          <PwaInstallModal
-            installEvent={pwaInstallEvent}
-            onInstall={handlePwaModalInstall}
-            onClose={() => setPwaModalOpen(false)}
-          />
-        )}
-
-        <BottomNav tab={tab} setTab={setTab} />
       </div>
     </div>
   );

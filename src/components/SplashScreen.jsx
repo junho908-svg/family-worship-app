@@ -7,12 +7,15 @@ const FLOAT_STYLE = `
   }
 `;
 
-export default function SplashScreen({ onComplete, logoUrl }) {
+export default function SplashScreen({ onComplete, logoUrl, autoHide = true }) {
   const [phase, setPhase] = useState('in'); // 'in' | 'visible' | 'out'
 
   useEffect(() => {
     // 페이드 인 완료 후 visible 상태
     const t1 = setTimeout(() => setPhase('visible'), 50);
+    if (!autoHide) {
+      return () => { clearTimeout(t1); };
+    }
     // 1200ms 후 페이드 아웃 시작
     const t2 = setTimeout(() => setPhase('out'), 1200);
     // 1500ms 후 onComplete 호출 (페이드 아웃 0.3초 포함)
